@@ -5,7 +5,7 @@ const Footer: React.FC = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="footer">
+    <footer className="footer footer--3d">
       <div className="footer__inner">
         <span className="footer__copy">
           © {year} HONG LAYEANG — ALL RIGHTS RESERVED

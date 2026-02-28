@@ -55,6 +55,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  cursor: none;
 }
 
 ::selection {
@@ -660,8 +661,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 28px 16px;
   border: 1px solid var(--border);
   background: var(--bg-card);
-  transition: transform 0.35s var(--ease-out), border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  transition: transform 0.25s var(--ease-out), border-color 0.3s, box-shadow 0.3s, background 0.3s;
   cursor: default;
+  will-change: transform;
+  position: relative;
 }
 
 .skills__icon-item:hover {
@@ -715,11 +718,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .project-card {
   border: 1px solid var(--border);
   background: var(--bg-card);
-  overflow: hidden;
+  overflow: visible;
   transition: border-color 0.4s, transform 0.4s var(--ease-out), box-shadow 0.4s;
   display: flex;
   flex-direction: column;
   cursor: pointer;
+  position: relative;
 }
 
 .project-card:hover {
@@ -728,8 +732,66 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 30px var(--accent-glow);
 }
 
+/* Ambient glow behind card (like profile) */
+.project-card__glow {
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, 0.06), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s;
+  pointer-events: none;
+}
+.project-card:hover .project-card__glow {
+  opacity: 1;
+}
+
+/* Corner accents (like profile) */
+.project-card__corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255, 255, 255, 0.25);
+  border-style: solid;
+  z-index: 3;
+  transition: border-color 0.4s, width 0.4s var(--ease-out), height 0.4s var(--ease-out);
+  pointer-events: none;
+}
+.project-card__corner--tl {
+  top: 10px;
+  left: 10px;
+  border-width: 1px 0 0 1px;
+}
+.project-card__corner--br {
+  bottom: 10px;
+  right: 10px;
+  border-width: 0 1px 1px 0;
+}
+.project-card:hover .project-card__corner {
+  width: 36px;
+  height: 36px;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Offset border (like profile) */
+.project-card__border-offset {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: -12px;
+  bottom: -12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  transition: opacity 0.4s, transform 0.5s var(--ease-out);
+  z-index: -1;
+}
+.project-card:hover .project-card__border-offset {
+  opacity: 0.5;
+  transform: translate(4px, 4px);
+}
+
 .project-card__image {
-  height: 200px;
+  height: 300px;
   position: relative;
   overflow: hidden;
 }
@@ -739,6 +801,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   inset: 0;
   opacity: 1;
   transition: opacity 0.5s ease;
+  pointer-events: none;
 }
 
 .project-card__gradient--1 { background: linear-gradient(135deg, #141414, #1a1a2e, #141414); }
@@ -791,6 +854,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   height: 100%;
   border: none;
   z-index: 1;
+  pointer-events: none;
   animation: fadeInMedia 0.5s ease forwards;
 }
 
@@ -878,6 +942,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: rgba(255, 255, 255, 0.04);
   line-height: 1;
   transition: color 0.4s;
+  pointer-events: none;
 }
 .project-card:hover .project-card__id { color: rgba(255, 255, 255, 0.08); }
 
@@ -894,6 +959,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   z-index: 2;
+  pointer-events: none;
 }
 
 .project-card__wireframe {
@@ -1337,7 +1403,495 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .footer__back-top:hover { color: var(--text-primary); }
 
 /* ============================================
-   SCROLL REVEAL ANIMATIONS
+   CUSTOM 3D CURSOR
+   ============================================ */
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  transition: width 0.3s var(--ease-out), height 0.3s var(--ease-out),
+    border-color 0.3s, background 0.3s;
+  will-change: transform;
+  mix-blend-mode: difference;
+}
+.cursor-ring.cursor--hover {
+  width: 60px;
+  height: 60px;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10001;
+  will-change: transform;
+  transition: width 0.3s, height 0.3s, background 0.3s;
+  mix-blend-mode: difference;
+}
+.cursor-dot.cursor-dot--hover {
+  width: 4px;
+  height: 4px;
+  background: white;
+}
+
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+  filter: blur(10px);
+}
+
+/* ============================================
+   FLOATING PARTICLES (global)
+   ============================================ */
+.floating-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  animation: particleFloat linear infinite;
+}
+
+.particle--1 { width: 3px; height: 3px; top: 15%; left: 10%; animation-duration: 18s; animation-delay: 0s; }
+.particle--2 { width: 2px; height: 2px; top: 45%; left: 85%; animation-duration: 22s; animation-delay: -5s; }
+.particle--3 { width: 4px; height: 4px; top: 70%; left: 25%; animation-duration: 15s; animation-delay: -3s; }
+.particle--4 { width: 2px; height: 2px; top: 25%; left: 70%; animation-duration: 20s; animation-delay: -8s; }
+.particle--5 { width: 3px; height: 3px; top: 85%; left: 55%; animation-duration: 17s; animation-delay: -2s; }
+.particle--6 { width: 2px; height: 2px; top: 55%; left: 40%; animation-duration: 25s; animation-delay: -10s; }
+
+@keyframes particleFloat {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  50%  { opacity: 0.3; }
+  90%  { opacity: 0.6; }
+  100% { transform: translate(80px, -120vh) rotate(720deg); opacity: 0; }
+}
+
+/* Interactive floating particles (JS-driven) */
+.particle-interactive {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+  will-change: transform, opacity;
+}
+
+/* ============================================
+   HERO CANVAS — interactive cursor hint
+   removed duplicate, cursor set on main rule
+   ============================================ */
+
+/* ============================================
+   3D PERSPECTIVE SECTIONS
+   ============================================ */
+.section--3d-perspective {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+/* 3D section title hover effect */
+.section__title--3d {
+  transition: transform 0.5s var(--ease-out), text-shadow 0.5s;
+  transform-style: preserve-3d;
+  display: inline-block;
+}
+.section__title--3d:hover {
+  transform: perspective(600px) rotateY(-3deg) translateZ(10px);
+  text-shadow: 4px 4px 12px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 255, 255, 0.04);
+}
+
+/* Section decoration (floating ring + line) */
+.section__decor {
+  position: absolute;
+  top: 120px;
+  right: 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+.section__decor-ring {
+  width: 120px;
+  height: 120px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+  animation: decoSpin 20s linear infinite;
+  position: relative;
+}
+.section__decor-ring::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+.section__decor-line {
+  width: 1px;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent);
+  margin: 20px auto 0;
+}
+@keyframes decoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   HERO 3D ENHANCEMENTS
+   ============================================ */
+.hero__shapes {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hero__shape {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hero__shape--ring {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  top: 15%;
+  right: 10%;
+  animation: heroShapeRotate 30s linear infinite;
+}
+.hero__shape--ring::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+}
+
+.hero__shape--cube {
+  width: 60px;
+  height: 60px;
+  bottom: 25%;
+  left: 8%;
+  animation: heroShapeFloat 8s ease-in-out infinite;
+  transform: rotate(45deg);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+.hero__shape--diamond {
+  width: 40px;
+  height: 40px;
+  top: 30%;
+  left: 15%;
+  transform: rotate(45deg);
+  animation: heroShapeFloat 6s ease-in-out infinite reverse;
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.hero__shape--cross {
+  width: 0;
+  height: 0;
+  top: 60%;
+  right: 15%;
+  border: none;
+}
+.hero__shape--cross::before,
+.hero__shape--cross::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hero__shape--cross::before {
+  width: 40px;
+  height: 1px;
+  top: 50%;
+  left: -20px;
+}
+.hero__shape--cross::after {
+  width: 1px;
+  height: 40px;
+  left: 50%;
+  top: -20px;
+}
+
+.hero__shape--dot-cluster {
+  width: 3px;
+  height: 3px;
+  bottom: 35%;
+  right: 25%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  box-shadow:
+    15px 8px 0 rgba(255, 255, 255, 0.06),
+    -10px 20px 0 rgba(255, 255, 255, 0.04),
+    25px 25px 0 rgba(255, 255, 255, 0.08);
+  animation: heroShapeFloat 10s ease-in-out infinite;
+}
+
+@keyframes heroShapeRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes heroShapeFloat {
+  0%, 100% { transform: translateY(0) rotate(45deg); opacity: 0.6; }
+  50% { transform: translateY(-20px) rotate(45deg); opacity: 1; }
+}
+
+/* 3D name effect */
+.hero__name--3d {
+  transform-style: preserve-3d;
+  transition: transform 1s var(--ease-out);
+}
+.hero__name--3d:hover {
+  transform: perspective(600px) rotateX(2deg) rotateY(-2deg) translateZ(20px);
+}
+
+/* Hero depth layers */
+.hero__depth-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero__depth-layer--1 {
+  background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.015), transparent 50%);
+}
+.hero__depth-layer--2 {
+  background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.01), transparent 40%);
+}
+
+/* 3D Button effects */
+.btn--3d {
+  transform-style: preserve-3d;
+  transition: all 0.4s var(--ease-out);
+  position: relative;
+}
+.btn--3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  opacity: 0.3;
+  filter: blur(12px);
+  transition: opacity 0.4s;
+  z-index: -1;
+}
+.btn--3d:hover {
+  transform: perspective(600px) translateY(-3px) translateZ(8px) rotateX(-2deg);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(255, 255, 255, 0.05);
+}
+.btn--3d:hover::after {
+  opacity: 0.6;
+}
+
+/* ============================================
+   ABOUT 3D ENHANCEMENTS
+   ============================================ */
+.about__photo-badge {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  width: 48px;
+  height: 48px;
+  background: var(--bg-primary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  animation: badgePulse 3s ease infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1); }
+  50% { box-shadow: 0 0 20px 4px rgba(255, 255, 255, 0.05); }
+}
+
+/* ============================================
+   SKILLS 3D ENHANCEMENTS
+   ============================================ */
+.skills__orbit {
+  position: absolute;
+  top: 50%;
+  right: -40px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.skills__orbit-ring {
+  width: 280px;
+  height: 280px;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 50%;
+  animation: decoSpin 25s linear infinite;
+  position: relative;
+}
+.skills__orbit-dot {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.skills__icon-item--3d {
+  transform-style: preserve-3d;
+  position: relative;
+  overflow: hidden;
+}
+.skills__icon-item--3d:hover {
+  transform: perspective(600px) translateY(-8px) translateZ(15px) rotateX(-3deg) !important;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.skills__icon-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.03) 50%, transparent 60%);
+  background-size: 300% 300%;
+  animation: shineSlide 4s ease infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes shineSlide {
+  0% { background-position: 200% 200%; }
+  100% { background-position: -200% -200%; }
+}
+
+/* ============================================
+   PROJECT CARD 3D ENHANCEMENTS
+   ============================================ */
+.project-card--3d {
+  transform-style: preserve-3d;
+  transition: transform 0.5s var(--ease-out), border-color 0.4s, box-shadow 0.4s;
+}
+.project-card--3d:hover {
+  transform: perspective(800px) rotateX(-2deg) rotateY(3deg) translateZ(12px) !important;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.03),
+    -8px 8px 0 rgba(0, 0, 0, 0.2);
+}
+.project-card--3d .project-card__content {
+  transform-style: preserve-3d;
+}
+.project-card--3d .project-card__title {
+  transition: transform 0.4s var(--ease-out);
+}
+.project-card--3d:hover .project-card__title {
+  transform: translateZ(8px) translateX(4px);
+}
+
+/* ============================================
+   CTA BANNER 3D ENHANCEMENTS
+   ============================================ */
+.cta-banner__shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cta-banner__shape {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.cta-banner__shape--1 {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  top: 20%;
+  left: 10%;
+  animation: heroShapeFloat 10s ease-in-out infinite;
+}
+.cta-banner__shape--2 {
+  width: 60px;
+  height: 60px;
+  transform: rotate(45deg);
+  bottom: 15%;
+  right: 12%;
+  animation: heroShapeFloat 7s ease-in-out infinite reverse;
+}
+.cta-banner__shape--3 {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  top: 50%;
+  right: 30%;
+  background: rgba(255, 255, 255, 0.02);
+  animation: heroShapeFloat 12s ease-in-out infinite;
+}
+
+.cta-banner__heading--3d {
+  transform-style: preserve-3d;
+  transition: transform 0.5s var(--ease-out), text-shadow 0.5s;
+  display: inline-block;
+}
+.cta-banner__heading--3d:hover {
+  transform: perspective(600px) rotateY(-2deg) translateZ(15px);
+  text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   FOOTER 3D
+   ============================================ */
+.footer--3d .footer__link {
+  transition: color 0.2s, transform 0.3s var(--ease-out);
+}
+.footer--3d .footer__link:hover {
+  transform: translateY(-2px);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.footer--3d .footer__back-top {
+  transition: color 0.2s, transform 0.3s var(--ease-out);
+}
+.footer--3d .footer__back-top:hover {
+  transform: translateY(-3px);
+}
+
+/* ============================================
+   CONTACT 3D ENHANCEMENTS
+   ============================================ */
+
+/* ============================================
+   SCROLL REVEAL ANIMATIONS (bidirectional 3D)
    ============================================ */
 .reveal {
   opacity: 0;
@@ -1351,32 +1905,32 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .reveal-left {
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(-40px) perspective(600px) rotateY(5deg);
   transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
 }
 .reveal-left.revealed {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) perspective(600px) rotateY(0deg);
 }
 
 .reveal-right {
   opacity: 0;
-  transform: translateX(40px);
+  transform: translateX(40px) perspective(600px) rotateY(-5deg);
   transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
 }
 .reveal-right.revealed {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) perspective(600px) rotateY(0deg);
 }
 
 .reveal-scale {
   opacity: 0;
-  transform: scale(0.9);
+  transform: scale(0.85) perspective(600px) rotateX(5deg);
   transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
 }
 .reveal-scale.revealed {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(1) perspective(600px) rotateX(0deg);
 }
 
 .reveal-delay-1 { transition-delay: 0.08s; }
@@ -1389,6 +1943,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .reveal-delay-8 { transition-delay: 0.64s; }
 
 /* ============================================
+   3D TILT BASE (for JS mouse tracking)
+   ============================================ */
+.tilt-3d {
+  transition: transform 0.4s var(--ease-out);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ============================================
    AMBIENT GRID (subtle)
    ============================================ */
 .deco-grid {
@@ -1396,15 +1959,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.018;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
   background-size: 80px 80px;
   animation: gridFadeIn 2s ease 1s forwards;
   opacity: 0;
 }
-@keyframes gridFadeIn { to { opacity: 0.018; } }
+@keyframes gridFadeIn { to { opacity: 0.06; } }
 
 /* ============================================
    ANIMATIONS
@@ -1469,11 +2031,18 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .skills__icon-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .projects__grid { grid-template-columns: repeat(2, 1fr); }
   .contact__grid { grid-template-columns: 1fr; gap: 48px; }
+
+  .section__decor { display: none; }
+  .skills__orbit { display: none; }
 }
 
 /* Mobile */
 @media (max-width: 768px) {
   :root { --section-py: 64px; }
+
+  /* Restore default cursor on touch devices */
+  body { cursor: auto; }
+  .cursor-ring, .cursor-dot, .cursor-glow { display: none; }
 
   .nav__links {
     position: fixed;
@@ -1502,12 +2071,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .projects__grid { grid-template-columns: 1fr; }
 
   .hero__actions { flex-direction: column; align-items: center; }
+  .hero__shapes { display: none; }
+
+  .floating-particles { display: none; }
 
   .footer__inner { flex-direction: column; gap: 24px; text-align: center; }
   .footer__links { flex-wrap: wrap; justify-content: center; }
   .section__header { margin-bottom: 40px; }
 
   .project-modal__links { flex-direction: column; }
+
+  .cta-banner__shapes { display: none; }
 }
 
 /* Small Mobile */

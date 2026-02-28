@@ -24,14 +24,19 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <section className="section" id="contact">
+    <section className="section section--3d-perspective" id="contact">
       <div className="section__container">
         <div className="section__header reveal">
           <div className="section__number">04</div>
-          <h2 className="section__title">CONTACT</h2>
+          <h2 className="section__title section__title--3d">CONTACT</h2>
           <p className="section__subtitle">
             Have a project in mind? Let's build something together.
           </p>
+        </div>
+
+        {/* 3D floating decoration */}
+        <div className="section__decor" aria-hidden="true">
+          <div className="section__decor-ring" />
         </div>
 
         <div className="contact__grid">
@@ -120,7 +125,7 @@ const Contact: React.FC = () => {
 
               <button
                 type="submit"
-                className="btn btn--primary form__submit"
+                className="btn btn--primary btn--3d form__submit"
               >
                 {submitted ? "SENT ✓" : "SEND MESSAGE"}
               </button>

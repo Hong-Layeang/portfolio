@@ -3,16 +3,22 @@ import { PERSONAL } from "../data/portfolio";
 import profileImg from "../assets/images/profile.png";
 
 const About: React.FC = () => (
-  <section id="about" className="section section--alt">
+  <section id="about" className="section section--alt section--3d-perspective">
     <div className="section__container">
       <div className="section__header reveal">
         <span className="section__number">01</span>
-        <h2 className="section__title">ABOUT</h2>
+        <h2 className="section__title section__title--3d">ABOUT ME</h2>
+      </div>
+
+      {/* 3D floating decoration */}
+      <div className="section__decor" aria-hidden="true">
+        <div className="section__decor-ring" />
+        <div className="section__decor-line" />
       </div>
 
       <div className="about__grid">
-        {/* Profile Photo */}
-        <div className="about__photo reveal-left">
+        {/* Profile Photo with 3D tilt */}
+        <div className="about__photo tilt-3d reveal-left">
           <div className="about__photo-glow" />
           <img
             src={profileImg}
@@ -22,6 +28,10 @@ const About: React.FC = () => (
           <div className="about__photo-border" />
           <div className="about__photo-corner about__photo-corner--tl" />
           <div className="about__photo-corner about__photo-corner--br" />
+          {/* 3D floating badge */}
+          <div className="about__photo-badge">
+            <span>CS</span>
+          </div>
         </div>
 
         {/* Text */}
@@ -29,7 +39,7 @@ const About: React.FC = () => (
           <p className="about__bio">{PERSONAL.bio}</p>
 
           {/* Education */}
-          <div className="about__education">
+          <div className="about__education tilt-3d">
             <div className="about__edu-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
@@ -44,15 +54,15 @@ const About: React.FC = () => (
           </div>
 
           <div className="about__stats">
-            <div className="about__stat">
+            <div className="about__stat reveal-scale reveal-delay-1">
               <div className="about__stat-number">Intern</div>
               <div className="about__stat-label">Current Role</div>
             </div>
-            <div className="about__stat">
+            <div className="about__stat reveal-scale reveal-delay-2">
               <div className="about__stat-number">15+</div>
               <div className="about__stat-label">Projects Built</div>
             </div>
-            <div className="about__stat">
+            <div className="about__stat reveal-scale reveal-delay-3">
               <div className="about__stat-number">∞</div>
               <div className="about__stat-label">Curiosity</div>
             </div>

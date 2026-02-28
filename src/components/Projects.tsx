@@ -51,37 +51,40 @@ const ImageCarousel: React.FC<{ images: string[]; alt: string }> = ({
 };
 
 /* ── YouTube Hover Player ────────────────── */
-const VideoPreview: React.FC<{ videoId: string; title: string }> = ({
+const VideoPreview: React.FC<{ videoId: string; title: string; isCardHovered: boolean }> = ({
   videoId,
   title,
+  isCardHovered,
 }) => {
-  const [hovered, setHovered] = useState(false);
+  const [showIframe, setShowIframe] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleEnter = () => {
-    timeoutRef.current = setTimeout(() => setHovered(true), 200);
-  };
+  useEffect(() => {
+    if (isCardHovered) {
+      timeoutRef.current = setTimeout(() => setShowIframe(true), 300);
+    } else {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setShowIframe(false);
+    }
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [isCardHovered]);
 
-  const handleLeave = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setHovered(false);
-  };
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&disablekb=1&fs=0&rel=0&modestbranding=1&playsinline=1`;
 
   return (
-    <div
-      className="project-card__video"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
+    <div className="project-card__video">
       {/* Thumbnail */}
       <img
         src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
         alt={`${title} thumbnail`}
-        className={`project-card__video-thumb${hovered ? " hidden" : ""}`}
+        className={`project-card__video-thumb${showIframe && !iframeError ? " hidden" : ""}`}
         loading="lazy"
       />
       {/* Play icon overlay */}
-      <div className={`project-card__play-icon${hovered ? " hidden" : ""}`}>
+      <div className={`project-card__play-icon${showIframe && !iframeError ? " hidden" : ""}`}>
         <svg viewBox="0 0 68 48" width="48" height="34">
           <path
             d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"
@@ -91,13 +94,14 @@ const VideoPreview: React.FC<{ videoId: string; title: string }> = ({
         </svg>
       </div>
       {/* Iframe loads on hover */}
-      {hovered && (
+      {showIframe && !iframeError && (
         <iframe
           className="project-card__video-iframe"
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1`}
+          src={embedUrl}
           title={title}
-          allow="autoplay; encrypted-media"
-          allowFullScreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          referrerPolicy="strict-origin-when-cross-origin"
+          onError={() => setIframeError(true)}
         />
       )}
     </div>
@@ -106,6 +110,7 @@ const VideoPreview: React.FC<{ videoId: string; title: string }> = ({
 
 const Projects: React.FC = () => {
   const [selected, setSelected] = useState<Project | null>(null);
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 
   const openModal = useCallback((p: Project) => {
     setSelected(p);
@@ -127,12 +132,13 @@ const Projects: React.FC = () => {
   }, [closeModal]);
 
   return (
-    <section id="projects" className="section section--alt">
+    <>
+    <section id="projects" className="section section--alt section--3d-perspective">
       <div className="section__container">
         {/* Header */}
         <div className="section__header reveal">
           <span className="section__number">03</span>
-          <h2 className="section__title">PROJECTS</h2>
+          <h2 className="section__title section__title--3d">PROJECTS</h2>
           <p className="section__subtitle">
             A selection of things I've built — hover to preview, click for
             details.
@@ -144,12 +150,20 @@ const Projects: React.FC = () => {
           {PROJECTS.map((p, i) => (
             <article
               key={p.id}
-              className={`project-card reveal reveal-delay-${(i % 4) + 1}`}
+              className={`project-card project-card--3d tilt-3d reveal reveal-delay-${(i % 4) + 1}`}
               onClick={() => openModal(p)}
+              onMouseEnter={() => setHoveredCardId(p.id)}
+              onMouseLeave={() => setHoveredCardId(null)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === "Enter" && openModal(p)}
             >
+              {/* Profile-style hover decorations */}
+              <div className="project-card__glow" />
+              <div className="project-card__corner project-card__corner--tl" />
+              <div className="project-card__corner project-card__corner--br" />
+              <div className="project-card__border-offset" />
+
               <div className="project-card__image">
                 <div
                   className={`project-card__gradient project-card__gradient--${p.id}`}
@@ -157,7 +171,7 @@ const Projects: React.FC = () => {
 
                 {/* Media: Video, Images, or fallback wireframe */}
                 {p.videoId ? (
-                  <VideoPreview videoId={p.videoId} title={p.title} />
+                  <VideoPreview videoId={p.videoId} title={p.title} isCardHovered={hoveredCardId === p.id} />
                 ) : p.images && p.images.length > 0 ? (
                   <ImageCarousel images={p.images} alt={p.title} />
                 ) : (
@@ -184,8 +198,9 @@ const Projects: React.FC = () => {
           ))}
         </div>
       </div>
+    </section>
 
-      {/* ── Modal ─────────────────────────── */}
+      {/* ── Modal (outside perspective container) ── */}
       <div
         className={`project-modal-backdrop${selected ? " active" : ""}`}
         onClick={(e) => {
@@ -208,9 +223,10 @@ const Projects: React.FC = () => {
             {selected.videoId && (
               <div className="project-modal__video">
                 <iframe
-                  src={`https://www.youtube.com/embed/${selected.videoId}?rel=0&modestbranding=1`}
+                  src={`https://www.youtube-nocookie.com/embed/${selected.videoId}?rel=0&modestbranding=1&enablejsapi=1&origin=${typeof window !== "undefined" ? encodeURIComponent(window.location.origin) : ""}`}
                   title={selected.title}
-                  allow="autoplay; encrypted-media; fullscreen"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  referrerPolicy="strict-origin-when-cross-origin"
                   allowFullScreen
                   className="project-modal__video-iframe"
                 />
@@ -259,7 +275,7 @@ const Projects: React.FC = () => {
           </div>
         )}
       </div>
-    </section>
+    </>
   );
 };
 

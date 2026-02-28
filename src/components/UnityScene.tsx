@@ -5,6 +5,8 @@ import React, { useRef, useEffect, useCallback } from "react";
    Lots of floating shapes, perspective grid,
    dense particles with constellation links,
    scanlines, and depth layers.
+   NOW WITH: mouse repulsion, click shockwave,
+   shape proximity glow.
    ============================================ */
 
 type ShapeType = "square" | "triangle" | "line" | "cross" | "hexagon" | "diamond" | "circle" | "bracket" | "dotGrid";
@@ -20,6 +22,9 @@ interface Shape {
   drift: { x: number; y: number };
   pulsePhase: number;
   layer: number; // 0=far, 1=mid, 2=near
+  // Interactive velocity from repulsion / shockwave
+  vx: number;
+  vy: number;
 }
 
 interface Particle {
@@ -33,15 +38,29 @@ interface Particle {
   layer: number;
 }
 
+interface Shockwave {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
+  alpha: number;
+  speed: number;
+}
+
 const SHAPE_COUNT = 45;
 const PARTICLE_COUNT = 160;
+const MOUSE_REPULSE_RADIUS = 120;
+const MOUSE_REPULSE_FORCE = 1.8;
+const SHAPE_GLOW_RADIUS = 180;
 
 const UnityScene: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouse = useRef({ x: 0.5, y: 0.5 });
   const smoothMouse = useRef({ x: 0.5, y: 0.5 });
+  const rawMouse = useRef({ x: 0, y: 0 }); // pixel coords for interactions
   const shapes = useRef<Shape[]>([]);
   const particles = useRef<Particle[]>([]);
+  const shockwaves = useRef<Shockwave[]>([]);
   const animId = useRef<number>(0);
   const time = useRef(0);
 
@@ -64,6 +83,8 @@ const UnityScene: React.FC = () => {
         },
         pulsePhase: Math.random() * Math.PI * 2,
         layer,
+        vx: 0,
+        vy: 0,
       };
     });
   }, []);
@@ -217,11 +238,28 @@ const UnityScene: React.FC = () => {
     const handleMouse = (e: MouseEvent) => {
       mouse.current.x = e.clientX / w;
       mouse.current.y = e.clientY / h;
+      rawMouse.current.x = e.clientX;
+      rawMouse.current.y = e.clientY;
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      shockwaves.current.push({
+        x: cx,
+        y: cy,
+        radius: 0,
+        maxRadius: Math.max(w, h) * 0.5,
+        alpha: 0.6,
+        speed: 6,
+      });
     };
 
     resize();
     window.addEventListener("resize", resize);
     window.addEventListener("mousemove", handleMouse);
+    canvas.addEventListener("click", handleClick);
 
     const draw = () => {
       time.current += 0.016;
@@ -273,13 +311,69 @@ const UnityScene: React.FC = () => {
       }
       ctx.restore();
 
-      /* === Shapes (sorted by layer) === */
+      /* === Mouse pixel position (for repulsion) === */
+      const canvasRect = canvas.getBoundingClientRect();
+      const mousePixelX = rawMouse.current.x - canvasRect.left;
+      const mousePixelY = rawMouse.current.y - canvasRect.top;
+
+      /* === Shockwave update === */
+      shockwaves.current = shockwaves.current.filter((sw) => {
+        sw.radius += sw.speed;
+        sw.alpha *= 0.97;
+        // Push particles and shapes outward
+        const pushForce = 4;
+        particles.current.forEach((p) => {
+          const dx = p.x - sw.x;
+          const dy = p.y - sw.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (Math.abs(dist - sw.radius) < 30 && dist > 0) {
+            p.vx += (dx / dist) * pushForce;
+            p.vy += (dy / dist) * pushForce;
+          }
+        });
+        shapes.current.forEach((s) => {
+          const dx = s.x - sw.x;
+          const dy = s.y - sw.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (Math.abs(dist - sw.radius) < 40 && dist > 0) {
+            s.vx += (dx / dist) * pushForce * 0.6;
+            s.vy += (dy / dist) * pushForce * 0.6;
+            s.rotSpeed += (Math.random() - 0.5) * 0.02;
+          }
+        });
+        return sw.alpha > 0.01 && sw.radius < sw.maxRadius;
+      });
+
+      /* === Draw shockwaves === */
+      shockwaves.current.forEach((sw) => {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${sw.alpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner ring for depth
+        ctx.strokeStyle = `rgba(255, 255, 255, ${sw.alpha * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      /* === Shapes (sorted by layer) — with proximity glow === */
       const sortedShapes = [...shapes.current].sort((a, b) => a.layer - b.layer);
       sortedShapes.forEach((s) => {
         const layerParallax = (s.layer + 1) * 0.25;
-        s.x += s.drift.x + parallaxX * 0.003 * layerParallax;
-        s.y += s.drift.y + parallaxY * 0.003 * layerParallax;
+        // Apply interactive velocity + drift
+        s.x += s.drift.x + parallaxX * 0.003 * layerParallax + s.vx;
+        s.y += s.drift.y + parallaxY * 0.003 * layerParallax + s.vy;
         s.rotation += s.rotSpeed;
+        // Friction on interactive velocity
+        s.vx *= 0.96;
+        s.vy *= 0.96;
+        // Dampen rotation speed back to normal
+        s.rotSpeed *= 0.999;
 
         if (s.x < -80) s.x = w + 80;
         if (s.x > w + 80) s.x = -80;
@@ -287,17 +381,37 @@ const UnityScene: React.FC = () => {
         if (s.y > h + 80) s.y = -80;
 
         const pulse = 1 + Math.sin(time.current * 0.7 + s.pulsePhase) * 0.25;
-        const alpha = s.opacity * pulse;
         const pxOff = parallaxX * layerParallax * 0.3;
         const pyOff = parallaxY * layerParallax * 0.3;
 
+        // --- Proximity glow: shapes near cursor glow brighter ---
+        const sScreenX = s.x + pxOff;
+        const sScreenY = s.y + pyOff;
+        const distToMouse = Math.sqrt(
+          (sScreenX - mousePixelX) ** 2 + (sScreenY - mousePixelY) ** 2
+        );
+        const glowFactor = distToMouse < SHAPE_GLOW_RADIUS
+          ? 1 + (1 - distToMouse / SHAPE_GLOW_RADIUS) * 2.5
+          : 1;
+        const scaleFactor = distToMouse < SHAPE_GLOW_RADIUS
+          ? 1 + (1 - distToMouse / SHAPE_GLOW_RADIUS) * 0.3
+          : 1;
+        const alpha = s.opacity * pulse * glowFactor;
+
         ctx.save();
-        ctx.translate(s.x + pxOff, s.y + pyOff);
+        ctx.translate(sScreenX, sScreenY);
+        ctx.scale(scaleFactor, scaleFactor);
         ctx.rotate(s.rotation);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.lineWidth = s.layer === 2 ? 1.2 : s.layer === 1 ? 0.8 : 0.5;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(alpha, 0.85)})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(alpha, 0.85)})`;
+        ctx.lineWidth = (s.layer === 2 ? 1.2 : s.layer === 1 ? 0.8 : 0.5) * glowFactor;
         ctx.globalAlpha = 1;
+
+        // Draw glow halo for nearby shapes
+        if (distToMouse < SHAPE_GLOW_RADIUS) {
+          ctx.shadowColor = "rgba(255, 255, 255, 0.4)";
+          ctx.shadowBlur = 12 * (1 - distToMouse / SHAPE_GLOW_RADIUS);
+        }
 
         switch (s.type) {
           case "square": drawSquare(ctx, s); break;
@@ -313,9 +427,25 @@ const UnityScene: React.FC = () => {
         ctx.restore();
       });
 
-      /* === Particles (layered) === */
+      /* === Particles (layered) — with mouse repulsion === */
       particles.current.forEach((p) => {
         const layerParallax = (p.layer + 1) * 0.2;
+
+        // Mouse repulsion: particles flee from cursor
+        const dx = p.x - mousePixelX;
+        const dy = p.y - mousePixelY;
+        const distSq = dx * dx + dy * dy;
+        const repulseR = MOUSE_REPULSE_RADIUS * (1 + p.layer * 0.3);
+        if (distSq < repulseR * repulseR && distSq > 0) {
+          const dist = Math.sqrt(distSq);
+          const force = (1 - dist / repulseR) * MOUSE_REPULSE_FORCE;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
+        }
+
+        // Apply velocity with friction
+        p.vx *= 0.97;
+        p.vy *= 0.97;
         p.x += p.vx + parallaxX * 0.002 * layerParallax;
         p.y += p.vy + parallaxY * 0.002 * layerParallax;
 
@@ -324,15 +454,32 @@ const UnityScene: React.FC = () => {
         if (p.x > w + 10) p.x = -10;
 
         const pulse = 1 + Math.sin(time.current * 1.3 + p.pulsePhase) * 0.3;
-        const alpha = p.opacity * pulse;
 
         const px = p.x + parallaxX * layerParallax * 0.2;
         const py = p.y + parallaxY * layerParallax * 0.2;
 
+        // Proximity glow for particles too
+        const pDistToMouse = Math.sqrt(
+          (px - mousePixelX) ** 2 + (py - mousePixelY) ** 2
+        );
+        const pGlow = pDistToMouse < MOUSE_REPULSE_RADIUS * 1.5
+          ? 1 + (1 - pDistToMouse / (MOUSE_REPULSE_RADIUS * 1.5)) * 2
+          : 1;
+        const alpha = Math.min(p.opacity * pulse * pGlow, 0.9);
+
         ctx.beginPath();
-        ctx.arc(px, py, p.r, 0, Math.PI * 2);
+        ctx.arc(px, py, p.r * (pGlow > 1 ? 1 + (pGlow - 1) * 0.3 : 1), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        if (pDistToMouse < MOUSE_REPULSE_RADIUS) {
+          ctx.shadowColor = "rgba(255, 255, 255, 0.5)";
+          ctx.shadowBlur = 8 * (1 - pDistToMouse / MOUSE_REPULSE_RADIUS);
+        } else {
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+        }
         ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       });
 
       /* === Constellation lines (denser, by layer) === */
@@ -424,6 +571,7 @@ const UnityScene: React.FC = () => {
       cancelAnimationFrame(animId.current);
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", handleMouse);
+      canvas.removeEventListener("click", handleClick);
     };
   }, [initShapes, initParticles]);
 
