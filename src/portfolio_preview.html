@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HONG LAYEANG — Full-Stack Engineer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0A0A0A;
+    --panel: #141414;
+    --panel-hover: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.18);
+    --text: #F0F0F0;
+    --text-dim: rgba(240,240,240,0.4);
+    --glow: rgba(255,255,255,0.25);
+    --accent: rgba(255,255,255,0.08);
+    --geo-near: rgba(255,255,255,0.06);
+    --geo-mid: rgba(255,255,255,0.03);
+    --geo-far: rgba(255,255,255,0.015);
+  }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    position: fixed; pointer-events: none; z-index: 9999;
+    width: 8px; height: 8px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: difference;
+  }
+  .cursor-trail {
+    position: fixed; pointer-events: none; z-index: 9998;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.12s ease;
+    mix-blend-mode: difference;
+  }
+  body:has(.panel-overlay.active) .cursor,
+  body:has(button:hover) .cursor { width: 16px; height: 16px; }
+
+  /* NOISE OVERLAY */
+  .noise {
+    position: fixed; inset: 0; z-index: 100; pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    animation: noiseAnim 0.5s steps(2) infinite;
+  }
+  @keyframes noiseAnim { 0%{background-position:0 0} 25%{background-position:50px -30px} 50%{background-position:-20px 60px} 75%{background-position:80px 20px} }
+
+  /* VIGNETTE */
+  .vignette {
+    position: fixed; inset: 0; z-index: 99; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+  }
+
+  /* MAIN SCENE */
+  #scene {
+    position: fixed; inset: 0; z-index: 1;
+    perspective: 1200px;
+    will-change: transform;
+  }
+
+  /* CANVAS for geometric bg */
+  #geo-canvas {
+    position: fixed; inset: 0; z-index: 0;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+  }
+  #geo-canvas.visible { opacity: 1; }
+
+  /* AMBIENT GRID */
+  .ambient-grid {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 80px 80px;
+    animation: gridFadeIn 2s ease 1.5s forwards;
+  }
+  @keyframes gridFadeIn { to { opacity: 1; } }
+
+  /* HERO SECTION */
+  #hero {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+  }
+  #hero.shrink {
+    transform: translateY(-28vh) scale(0.65);
+    opacity: 0.85;
+  }
+
+  .hero-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 10vw, 148px);
+    letter-spacing: 0.08em;
+    line-height: 0.92;
+    text-align: center;
+    opacity: 0;
+    filter: blur(8px);
+    transform: scale(0.97);
+    animation: nameReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+    text-shadow: 0 0 80px rgba(255,255,255,0.08);
+    user-select: none;
+  }
+  @keyframes nameReveal {
+    to { opacity: 1; filter: blur(0px); transform: scale(1); }
+  }
+
+  .hero-title {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(10px, 1.2vw, 15px);
+    letter-spacing: 0.42em;
+    color: var(--text-dim);
+    margin-top: 20px;
+    opacity: 0;
+    animation: subtitleReveal 0.7s ease 1.5s forwards;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  @keyframes subtitleReveal { to { opacity: 1; } }
+
+  .hero-divider {
+    width: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    margin: 24px auto;
+    animation: dividerExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) 2.1s forwards;
+  }
+  @keyframes dividerExpand { to { width: min(320px, 40vw); } }
+
+  .enter-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    color: rgba(255,255,255,0.6);
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 14px 36px;
+    cursor: none;
+    opacity: 0;
+    animation: enterReveal 0.6s ease 2.7s forwards;
+    transition: color 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .enter-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(255,255,255,0.04);
+    transform: translateX(-100%);
+    transition: transform 0.4s ease;
+  }
+  .enter-btn:hover::before { transform: translateX(0); }
+  .enter-btn:hover {
+    color: rgba(255,255,255,0.95);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 30px rgba(255,255,255,0.07), inset 0 0 30px rgba(255,255,255,0.03);
+    transform: scale(1.03);
+  }
+  @keyframes enterReveal { to { opacity: 1; } }
+
+  /* STATUS INDICATOR */
+  .status-line {
+    position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.2); z-index: 50;
+    opacity: 0; animation: fadeIn 1s ease 3.2s forwards;
+    white-space: nowrap;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* COORDINATE READOUT */
+  .coords {
+    position: fixed; bottom: 36px; right: 40px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.12); z-index: 50;
+    opacity: 0; animation: fadeIn 1s ease 3.5s forwards;
+  }
+
+  /* FLOATING PANELS CONTAINER */
+  #panels {
+    position: fixed; inset: 0; z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  #panels.active { opacity: 1; pointer-events: auto; }
+
+  /* INDIVIDUAL PANEL */
+  .panel {
+    position: absolute;
+    background: rgba(15, 15, 15, 0.88);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    cursor: none;
+    transform-origin: center center;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s ease,
+                box-shadow 0.4s ease;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .panel:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 0 40px rgba(255,255,255,0.05), 0 24px 48px rgba(0,0,0,0.4);
+    transform: scale(1.02) !important;
+  }
+  .panel:hover .panel-glow { opacity: 1; }
+
+  .panel-glow {
+    position: absolute; inset: -1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .panel-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    padding: 18px 20px 0;
+    display: block;
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 0.06em;
+    padding: 8px 20px 0;
+    color: rgba(255,255,255,0.88);
+  }
+  .panel-subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    padding: 6px 20px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+  }
+  .panel-divider {
+    width: calc(100% - 40px); height: 1px; margin: 0 20px;
+    background: var(--border);
+  }
+  .panel-preview {
+    padding: 14px 20px 18px;
+    font-size: 11px; line-height: 1.7;
+    color: rgba(255,255,255,0.22);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* PANEL POSITIONS */
+  #panel-projects {
+    left: 4%; top: 50%; transform: translateY(-50%);
+    width: min(280px, 26vw);
+    animation: slideFromLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+  }
+  #panel-skills {
+    right: 4%; bottom: 12%;
+    width: min(260px, 24vw);
+    animation: slideFromRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+  }
+  #panel-philosophy {
+    right: 4%; top: 20%;
+    width: min(240px, 22vw);
+    animation: slideFromRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+  }
+  #panel-experience {
+    left: 50%; top: 8%;
+    transform: translateX(-50%);
+    width: min(420px, 40vw);
+    animation: slideFromTop 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+  }
+  #panel-contact {
+    left: 4%; bottom: 10%;
+    width: min(220px, 20vw);
+    animation: slideFromLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+  }
+
+  @keyframes slideFromLeft {
+    from { opacity: 0; transform: translateX(-40px) translateY(-50%); }
+    to { opacity: 1; transform: translateX(0) translateY(-50%); }
+  }
+  #panel-skills { transform: none; }
+  @keyframes slideFromRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideFromTop {
+    from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes slideFromBottom {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* EXPERIENCE TIMELINE */
+  .timeline-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px;
+  }
+  .timeline-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    flex-shrink: 0;
+    animation: dotPulse 2.5s ease infinite;
+  }
+  .timeline-dot:nth-child(1) { animation-delay: 0s; }
+  .timeline-dot:nth-child(2) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.4); }
+  }
+  .timeline-info { flex: 1; }
+  .timeline-company {
+    font-size: 11px; font-family: 'DM Sans', sans-serif;
+    color: rgba(255,255,255,0.7); font-weight: 500;
+  }
+  .timeline-role {
+    font-size: 9px; font-family: 'Space Mono', monospace;
+    color: rgba(255,255,255,0.25); margin-top: 2px;
+  }
+  .timeline-year {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: rgba(255,255,255,0.2);
+  }
+
+  /* SKILLS GRID */
+  .skills-grid {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 12px 20px 16px;
+  }
+  .skill-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.1em;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 4px 8px;
+    color: rgba(255,255,255,0.4);
+    transition: all 0.2s ease;
+    cursor: none;
+  }
+  .skill-tag:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.04);
+  }
+
+  /* PROJECT ITEMS */
+  .project-item {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: none;
+    transition: background 0.2s;
+  }
+  .project-item:last-child { border-bottom: none; }
+  .project-item:hover { background: rgba(255,255,255,0.025); }
+  .project-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    color: rgba(255,255,255,0.75);
+  }
+  .project-tech {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; color: rgba(255,255,255,0.2);
+    margin-top: 3px; letter-spacing: 0.05em;
+  }
+
+  /* PANEL OVERLAY (expanded view) */
+  .panel-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(8,8,8,0.96);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .panel-overlay.active {
+    opacity: 1; pointer-events: auto;
+  }
+  .overlay-content {
+    width: min(800px, 88vw);
+    max-height: 85vh; overflow-y: auto;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .panel-overlay.active .overlay-content {
+    transform: translateY(0) scale(1);
+  }
+  .overlay-header {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 28px; margin-bottom: 40px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .overlay-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.3); display: block; margin-bottom: 10px;
+  }
+  .overlay-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 6vw, 72px);
+    letter-spacing: 0.05em; line-height: 1;
+  }
+  .overlay-close {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 0.25em;
+    color: rgba(255,255,255,0.3); background: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px 20px; cursor: none;
+    transition: all 0.25s;
+  }
+  .overlay-close:hover {
+    color: rgba(255,255,255,0.8);
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  /* OVERLAY GRID */
+  .overlay-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 40px;
+  }
+  .overlay-card {
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 24px 22px;
+    background: rgba(255,255,255,0.02);
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .overlay-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+  }
+  .overlay-card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.35em;
+    color: rgba(255,255,255,0.25); margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .overlay-card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.85); margin-bottom: 6px;
+  }
+  .overlay-card-desc {
+    font-size: 11px; line-height: 1.7;
+    color: rgba(255,255,255,0.35);
+    font-family: 'DM Sans', sans-serif; font-weight: 300;
+  }
+  .overlay-card-tags {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px;
+  }
+  .overlay-tag-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 7px; letter-spacing: 0.1em;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 3px 7px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* SECTION: SKILLS DETAILED */
+  .skills-section { margin-bottom: 36px; }
+  .skills-section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.25); margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .skills-bars { display: flex; flex-direction: column; gap: 10px; }
+  .skill-bar-row {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .skill-bar-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: rgba(255,255,255,0.5);
+    width: 100px; flex-shrink: 0;
+  }
+  .skill-bar-track {
+    flex: 1; height: 1px;
+    background: rgba(255,255,255,0.06);
+    position: relative; overflow: hidden;
+  }
+  .skill-bar-fill {
+    height: 100%; background: rgba(255,255,255,0.4);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .skills-section.revealed .skill-bar-fill { transform: scaleX(1); }
+
+  /* CORNER DECORATIONS */
+  .corner-tl, .corner-br {
+    position: fixed; z-index: 50; pointer-events: none;
+    opacity: 0; animation: fadeIn 1s ease 3s forwards;
+  }
+  .corner-tl { top: 24px; left: 28px; }
+  .corner-br { bottom: 24px; right: 28px; }
+  .corner-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.15);
+  }
+
+  /* BACK BUTTON */
+  .back-btn {
+    position: fixed; top: 28px; left: 28px; z-index: 300;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.35); background: none;
+    border: none; cursor: none;
+    opacity: 0; pointer-events: none;
+    transition: color 0.25s, opacity 0.3s;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .back-btn.active { opacity: 1; pointer-events: auto; }
+  .back-btn:hover { color: rgba(255,255,255,0.75); }
+  .back-btn::before {
+    content: '←'; font-size: 11px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+  /* LOADING FLASH */
+  .initial-black {
+    position: fixed; inset: 0; z-index: 500;
+    background: #000;
+    animation: initialFade 0.5s ease 0.3s forwards;
+  }
+  @keyframes initialFade { to { opacity: 0; pointer-events: none; } }
+
+  /* CONTACT PANEL */
+  .contact-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.4);
+    text-decoration: none; cursor: none;
+    transition: color 0.2s, background 0.2s;
+  }
+  .contact-link:last-child { border-bottom: none; }
+  .contact-link:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.02); }
+  .contact-link span { color: rgba(255,255,255,0.15); }
+
+  /* PHILOSOPHY */
+  .philosophy-body {
+    padding: 14px 20px 18px;
+    font-size: 10px; line-height: 1.9;
+    color: rgba(255,255,255,0.28);
+    font-family: 'DM Sans', sans-serif; font-weight: 300;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="initial-black"></div>
+<div class="noise"></div>
+<div class="vignette"></div>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-trail" id="cursorTrail"></div>
+<div class="ambient-grid"></div>
+<canvas id="geo-canvas"></canvas>
+
+<!-- Corner Decorations -->
+<div class="corner-tl"><span class="corner-text">HL — 2025</span></div>
+<div class="corner-br"><span class="corner-text">PHNOM PENH / REMOTE</span></div>
+<div class="status-line">[ PORTFOLIO SYSTEM ACTIVE ]</div>
+<div class="coords" id="coords">X:000 Y:000</div>
+
+<!-- Back Button (when in panels mode) -->
+<button class="back-btn" id="backBtn">MAIN</button>
+
+<!-- HERO SECTION -->
+<div id="hero">
+  <h1 class="hero-name">HONG<br>LAYEANG</h1>
+  <p class="hero-title">Full-Stack Engineer</p>
+  <div class="hero-divider"></div>
+  <button class="enter-btn" id="enterBtn">[ ENTER ]</button>
+</div>
+
+<!-- FLOATING PANELS -->
+<div id="panels">
+
+  <!-- EXPERIENCE TIMELINE -->
+  <div class="panel" id="panel-experience" onclick="openOverlay('experience')">
+    <div class="panel-glow"></div>
+    <span class="panel-tag">// TIMELINE</span>
+    <div class="panel-title">EXPERIENCE</div>
+    <div class="panel-divider"></div>
+    <div class="timeline-row">
+      <div class="timeline-dot" style="animation-delay:0s"></div>
+      <div class="timeline-info">
+        <div class="timeline-company">Senior Full-Stack Engineer</div>
+        <div class="timeline-role">Scalable Systems / API Architecture</div>
+      </div>
+      <div class="timeline-year">2024</div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-dot" style="animation-delay:0.5s"></div>
+      <div class="timeline-info">
+        <div class="timeline-company">Full-Stack Developer</div>
+        <div class="timeline-role">React / Node.js / PostgreSQL</div>
+      </div>
+      <div class="timeline-year">2022</div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-dot" style="animation-delay:1s"></div>
+      <div class="timeline-info">
+        <div class="timeline-company">Frontend Engineer</div>
+        <div class="timeline-role">UI Systems / Design Engineering</div>
+      </div>
+      <div class="timeline-year">2020</div>
+    </div>
+  </div>
+
+  <!-- PROJECTS PANEL -->
+  <div class="panel" id="panel-projects" onclick="openOverlay('projects')">
+    <div class="panel-glow"></div>
+    <span class="panel-tag">// WORK</span>
+    <div class="panel-title">PROJECTS</div>
+    <div class="panel-subtitle">Selected engineering work</div>
+    <div class="panel-divider"></div>
+    <div class="project-item">
+      <div class="project-name">Distributed Auth System</div>
+      <div class="project-tech">Node.js · Redis · JWT · Microservices</div>
+    </div>
+    <div class="project-item">
+      <div class="project-name">Real-Time Analytics Platform</div>
+      <div class="project-tech">React · WebSockets · ClickHouse</div>
+    </div>
+    <div class="project-item">
+      <div class="project-name">E-Commerce Infrastructure</div>
+      <div class="project-tech">Next.js · Stripe · PostgreSQL</div>
+    </div>
+  </div>
+
+  <!-- SKILLS PANEL -->
+  <div class="panel" id="panel-skills" onclick="openOverlay('skills')">
+    <div class="panel-glow"></div>
+    <span class="panel-tag">// CAPABILITIES</span>
+    <div class="panel-title">SKILLS</div>
+    <div class="panel-divider"></div>
+    <div class="skills-grid">
+      <span class="skill-tag">REACT</span>
+      <span class="skill-tag">NODE.JS</span>
+      <span class="skill-tag">TYPESCRIPT</span>
+      <span class="skill-tag">NEXT.JS</span>
+      <span class="skill-tag">POSTGRESQL</span>
+      <span class="skill-tag">REDIS</span>
+      <span class="skill-tag">DOCKER</span>
+      <span class="skill-tag">AWS</span>
+      <span class="skill-tag">GRAPHQL</span>
+    </div>
+  </div>
+
+  <!-- PHILOSOPHY PANEL -->
+  <div class="panel" id="panel-philosophy" onclick="openOverlay('philosophy')">
+    <div class="panel-glow"></div>
+    <span class="panel-tag">// METHODOLOGY</span>
+    <div class="panel-title">HOW I BUILD</div>
+    <div class="panel-divider"></div>
+    <div class="philosophy-body">
+      "Systems should be designed<br>
+      as if they will scale infinitely,<br>
+      and maintained as if someone<br>
+      else is reading the code."
+    </div>
+  </div>
+
+  <!-- CONTACT PANEL -->
+  <div class="panel" id="panel-contact" onclick="openOverlay('contact')">
+    <div class="panel-glow"></div>
+    <span class="panel-tag">// CONNECT</span>
+    <div class="panel-title">CONTACT</div>
+    <div class="panel-divider"></div>
+    <a href="#" class="contact-link">GITHUB <span>→</span></a>
+    <a href="#" class="contact-link">LINKEDIN <span>→</span></a>
+    <a href="#" class="contact-link">EMAIL <span>→</span></a>
+  </div>
+
+</div>
+
+<!-- OVERLAY (expanded panel view) -->
+<div class="panel-overlay" id="panelOverlay">
+  <div class="overlay-content" id="overlayContent"></div>
+</div>
+
+<!-- OVERLAY TEMPLATES (hidden) -->
+<template id="tmpl-projects">
+  <div class="overlay-header">
+    <div>
+      <span class="overlay-tag">// SELECTED WORK</span>
+      <div class="overlay-title">PROJECTS</div>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">[ CLOSE ]</button>
+  </div>
+  <div class="overlay-grid">
+    <div class="overlay-card">
+      <div class="overlay-card-label">01 — BACKEND</div>
+      <div class="overlay-card-title">Distributed Auth System</div>
+      <div class="overlay-card-desc">Scalable authentication infrastructure handling millions of requests. JWT-based token management with Redis caching and microservice architecture.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">Node.js</span>
+        <span class="overlay-tag-pill">Redis</span>
+        <span class="overlay-tag-pill">JWT</span>
+        <span class="overlay-tag-pill">Microservices</span>
+      </div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">02 — FULLSTACK</div>
+      <div class="overlay-card-title">Analytics Platform</div>
+      <div class="overlay-card-desc">Real-time data analytics dashboard with WebSocket streaming, custom charting, and ClickHouse for sub-second query performance on billions of rows.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">React</span>
+        <span class="overlay-tag-pill">WebSockets</span>
+        <span class="overlay-tag-pill">ClickHouse</span>
+      </div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">03 — E-COMMERCE</div>
+      <div class="overlay-card-title">Commerce Infrastructure</div>
+      <div class="overlay-card-desc">End-to-end e-commerce system with dynamic pricing, inventory management, Stripe integration, and a headless CMS-driven storefront.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">Next.js</span>
+        <span class="overlay-tag-pill">Stripe</span>
+        <span class="overlay-tag-pill">PostgreSQL</span>
+      </div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">04 — INFRA</div>
+      <div class="overlay-card-title">CI/CD Pipeline System</div>
+      <div class="overlay-card-desc">Automated deployment pipeline with Docker containerization, GitHub Actions integration, and zero-downtime deployments to AWS ECS.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">Docker</span>
+        <span class="overlay-tag-pill">AWS ECS</span>
+        <span class="overlay-tag-pill">GitHub Actions</span>
+      </div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">05 — API</div>
+      <div class="overlay-card-title">GraphQL Gateway</div>
+      <div class="overlay-card-desc">Unified GraphQL gateway aggregating multiple REST microservices. DataLoader batching, query complexity limits, and subscription support.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">GraphQL</span>
+        <span class="overlay-tag-pill">Apollo</span>
+        <span class="overlay-tag-pill">DataLoader</span>
+      </div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">06 — MOBILE</div>
+      <div class="overlay-card-title">Cross-Platform App</div>
+      <div class="overlay-card-desc">React Native application with offline-first architecture, background sync, push notifications, and shared business logic with the web platform.</div>
+      <div class="overlay-card-tags">
+        <span class="overlay-tag-pill">React Native</span>
+        <span class="overlay-tag-pill">Expo</span>
+        <span class="overlay-tag-pill">Redux</span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tmpl-skills">
+  <div class="overlay-header">
+    <div>
+      <span class="overlay-tag">// TECHNICAL CAPABILITIES</span>
+      <div class="overlay-title">SKILLS</div>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">[ CLOSE ]</button>
+  </div>
+  <div class="skills-section" id="skillsSection">
+    <div class="skills-section-title">FRONTEND</div>
+    <div class="skills-bars">
+      <div class="skill-bar-row"><span class="skill-bar-name">React / Next.js</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:95%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">TypeScript</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:92%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">CSS / Tailwind</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:88%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">React Native</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:80%"></div></div></div>
+    </div>
+  </div>
+  <div class="skills-section" id="skillsSection2">
+    <div class="skills-section-title">BACKEND</div>
+    <div class="skills-bars">
+      <div class="skill-bar-row"><span class="skill-bar-name">Node.js</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:94%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">PostgreSQL</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:87%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">GraphQL</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:85%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">Redis</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:82%"></div></div></div>
+    </div>
+  </div>
+  <div class="skills-section" id="skillsSection3">
+    <div class="skills-section-title">INFRASTRUCTURE</div>
+    <div class="skills-bars">
+      <div class="skill-bar-row"><span class="skill-bar-name">Docker / K8s</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:78%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">AWS</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:80%"></div></div></div>
+      <div class="skill-bar-row"><span class="skill-bar-name">CI/CD</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:84%"></div></div></div>
+    </div>
+  </div>
+</template>
+
+<template id="tmpl-experience">
+  <div class="overlay-header">
+    <div>
+      <span class="overlay-tag">// CAREER HISTORY</span>
+      <div class="overlay-title">EXPERIENCE</div>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">[ CLOSE ]</button>
+  </div>
+  <div class="overlay-grid" style="grid-template-columns:1fr">
+    <div class="overlay-card" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">
+      <div>
+        <div class="overlay-card-label">2024 — PRESENT</div>
+        <div class="overlay-card-title">SENIOR FULL-STACK ENGINEER</div>
+        <div class="overlay-card-desc">Leading architecture decisions for high-traffic applications. Designed distributed systems processing 10M+ requests/day. Mentored junior engineers and established code review culture. Introduced microservice patterns that reduced deployment time by 60%.</div>
+        <div class="overlay-card-tags">
+          <span class="overlay-tag-pill">Architecture</span>
+          <span class="overlay-tag-pill">Team Lead</span>
+          <span class="overlay-tag-pill">Microservices</span>
+        </div>
+      </div>
+    </div>
+    <div class="overlay-card" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">
+      <div>
+        <div class="overlay-card-label">2022 — 2024</div>
+        <div class="overlay-card-title">FULL-STACK DEVELOPER</div>
+        <div class="overlay-card-desc">Built and maintained production applications serving thousands of users daily. Implemented real-time features, payment integrations, and optimized database queries reducing average response time from 800ms to 120ms.</div>
+        <div class="overlay-card-tags">
+          <span class="overlay-tag-pill">React</span>
+          <span class="overlay-tag-pill">Node.js</span>
+          <span class="overlay-tag-pill">PostgreSQL</span>
+        </div>
+      </div>
+    </div>
+    <div class="overlay-card" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">
+      <div>
+        <div class="overlay-card-label">2020 — 2022</div>
+        <div class="overlay-card-title">FRONTEND ENGINEER</div>
+        <div class="overlay-card-desc">Crafted pixel-perfect UI components and design systems. Collaborated closely with design team to bridge the gap between design and engineering. Built reusable component library used across 4 products.</div>
+        <div class="overlay-card-tags">
+          <span class="overlay-tag-pill">UI Systems</span>
+          <span class="overlay-tag-pill">Storybook</span>
+          <span class="overlay-tag-pill">Design Eng</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tmpl-philosophy">
+  <div class="overlay-header">
+    <div>
+      <span class="overlay-tag">// ENGINEERING PRINCIPLES</span>
+      <div class="overlay-title">HOW I BUILD SYSTEMS</div>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">[ CLOSE ]</button>
+  </div>
+  <div class="overlay-grid">
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 01</div>
+      <div class="overlay-card-title">SCALE BY DESIGN</div>
+      <div class="overlay-card-desc">Architecture decisions made today compound over years. I design systems to scale before they need to — not after they're breaking.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 02</div>
+      <div class="overlay-card-title">READABLE CODE</div>
+      <div class="overlay-card-desc">Code is written once but read hundreds of times. Clarity is not a luxury — it's the foundation of maintainable systems.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 03</div>
+      <div class="overlay-card-title">FAIL GRACEFULLY</div>
+      <div class="overlay-card-desc">Every system will encounter unexpected states. I design failure paths with the same care as happy paths.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 04</div>
+      <div class="overlay-card-title">SHIP, LEARN, ITERATE</div>
+      <div class="overlay-card-desc">Perfect is the enemy of shipped. I bias toward iteration — deploy early, measure continuously, refine with data.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 05</div>
+      <div class="overlay-card-title">OWN THE FULL STACK</div>
+      <div class="overlay-card-desc">Understanding the entire system — from database query to pixel render — enables holistic optimization and faster debugging.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">PRINCIPLE 06</div>
+      <div class="overlay-card-title">EMPATHY IN API DESIGN</div>
+      <div class="overlay-card-desc">Every API is a contract with another developer. I design APIs the way I'd want to consume them — predictable, documented, versioned.</div>
+    </div>
+  </div>
+</template>
+
+<template id="tmpl-contact">
+  <div class="overlay-header">
+    <div>
+      <span class="overlay-tag">// GET IN TOUCH</span>
+      <div class="overlay-title">CONTACT</div>
+    </div>
+    <button class="overlay-close" onclick="closeOverlay()">[ CLOSE ]</button>
+  </div>
+  <div class="overlay-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="overlay-card">
+      <div class="overlay-card-label">GITHUB</div>
+      <div class="overlay-card-title">@HONGLAYEANG</div>
+      <div class="overlay-card-desc">Open source contributions, personal projects, and engineering experiments.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">EMAIL</div>
+      <div class="overlay-card-title">AVAILABLE FOR WORK</div>
+      <div class="overlay-card-desc">Open to senior full-stack roles, technical co-founder opportunities, and interesting consulting projects.</div>
+    </div>
+    <div class="overlay-card">
+      <div class="overlay-card-label">LINKEDIN</div>
+      <div class="overlay-card-title">HONG LAYEANG</div>
+      <div class="overlay-card-desc">Professional history, recommendations, and detailed project descriptions.</div>
+    </div>
+  </div>
+</template>
+
+<script>
+  // CURSOR
+  const cursor = document.getElementById('cursor');
+  const trail = document.getElementById('cursorTrail');
+  const coords = document.getElementById('coords');
+  let mouseX = 0, mouseY = 0, trailX = 0, trailY = 0;
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    cursor.style.left = mouseX + 'px';
+    cursor.style.top = mouseY + 'px';
+    coords.textContent = `X:${String(Math.round(e.clientX / window.innerWidth * 999)).padStart(3,'0')} Y:${String(Math.round(e.clientY / window.innerHeight * 999)).padStart(3,'0')}`;
+    // Parallax
+    if (!entered) {
+      const rx = (e.clientX / window.innerWidth - 0.5) * 6;
+      const ry = (e.clientY / window.innerHeight - 0.5) * 4;
+      document.getElementById('scene').style.transform = `rotateY(${rx}deg) rotateX(${-ry}deg)`;
+    }
+  });
+
+  function animateTrail() {
+    trailX += (mouseX - trailX) * 0.12;
+    trailY += (mouseY - trailY) * 0.12;
+    trail.style.left = trailX + 'px';
+    trail.style.top = trailY + 'px';
+    requestAnimationFrame(animateTrail);
+  }
+  animateTrail();
+
+  // GEOMETRIC CANVAS
+  const canvas = document.getElementById('geo-canvas');
+  const ctx = canvas.getContext('2d');
+  let shapes = [];
+  let particles = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Shape {
+    constructor() { this.reset(); this.y = Math.random() * window.innerHeight; }
+    reset() {
+      this.x = Math.random() * window.innerWidth;
+      this.y = window.innerHeight + 50;
+      this.size = 20 + Math.random() * 80;
+      this.speed = 0.08 + Math.random() * 0.15;
+      this.rotSpeed = (Math.random() - 0.5) * 0.005;
+      this.rot = Math.random() * Math.PI * 2;
+      this.opacity = 0.02 + Math.random() * 0.05;
+      this.type = ['square', 'triangle', 'line', 'cross'][Math.floor(Math.random() * 4)];
+      this.drift = (Math.random() - 0.5) * 0.2;
+    }
+    update() {
+      this.y -= this.speed;
+      this.x += this.drift;
+      this.rot += this.rotSpeed;
+      if (this.y < -100) this.reset();
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rot);
+      ctx.globalAlpha = this.opacity;
+      ctx.strokeStyle = 'rgba(255,255,255,1)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      if (this.type === 'square') {
+        ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+      } else if (this.type === 'triangle') {
+        ctx.moveTo(0, -this.size/2);
+        ctx.lineTo(this.size/2, this.size/2);
+        ctx.lineTo(-this.size/2, this.size/2);
+        ctx.closePath();
+      } else if (this.type === 'line') {
+        ctx.moveTo(-this.size/2, 0);
+        ctx.lineTo(this.size/2, 0);
+      } else {
+        ctx.moveTo(-this.size/2, 0); ctx.lineTo(this.size/2, 0);
+        ctx.moveTo(0, -this.size/2); ctx.lineTo(0, this.size/2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  class Particle {
+    constructor() { this.reset(); this.y = Math.random() * window.innerHeight; }
+    reset() {
+      this.x = Math.random() * window.innerWidth;
+      this.y = window.innerHeight + 10;
+      this.speed = 0.3 + Math.random() * 0.5;
+      this.opacity = 0.05 + Math.random() * 0.12;
+      this.size = 0.5 + Math.random() * 1;
+      this.drift = (Math.random() - 0.5) * 0.3;
+    }
+    update() {
+      this.y -= this.speed;
+      this.x += this.drift;
+      if (this.y < -10) this.reset();
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.globalAlpha = this.opacity;
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  for (let i = 0; i < 18; i++) shapes.push(new Shape());
+  for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+  function drawGeo() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    shapes.forEach(s => { s.update(); s.draw(ctx); });
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+    requestAnimationFrame(drawGeo);
+  }
+  drawGeo();
+
+  // STATE
+  let entered = false;
+
+  // ENTER CLICK
+  document.getElementById('enterBtn').addEventListener('click', () => {
+    entered = true;
+    const hero = document.getElementById('hero');
+    const panels = document.getElementById('panels');
+    const backBtn = document.getElementById('backBtn');
+    const canvas = document.getElementById('geo-canvas');
+
+    hero.classList.add('shrink');
+    canvas.classList.add('visible');
+
+    setTimeout(() => {
+      panels.classList.add('active');
+      backBtn.classList.add('active');
+    }, 400);
+
+    document.getElementById('scene').style.transform = '';
+    document.getElementById('scene').style.transition = 'transform 1.2s cubic-bezier(0.16, 1, 0.3, 1)';
+  });
+
+  // BACK BUTTON
+  document.getElementById('backBtn').addEventListener('click', () => {
+    entered = false;
+    const hero = document.getElementById('hero');
+    const panels = document.getElementById('panels');
+    const backBtn = document.getElementById('backBtn');
+    const canvas = document.getElementById('geo-canvas');
+
+    hero.classList.remove('shrink');
+    panels.classList.remove('active');
+    backBtn.classList.remove('active');
+    canvas.classList.remove('visible');
+  });
+
+  // OVERLAY
+  function openOverlay(type) {
+    const overlay = document.getElementById('panelOverlay');
+    const content = document.getElementById('overlayContent');
+    const tmpl = document.getElementById('tmpl-' + type);
+    if (!tmpl) return;
+    content.innerHTML = tmpl.innerHTML;
+    overlay.classList.add('active');
+
+    // Animate skill bars if skills overlay
+    if (type === 'skills') {
+      setTimeout(() => {
+        ['skillsSection','skillsSection2','skillsSection3'].forEach((id, i) => {
+          setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('revealed');
+          }, i * 150);
+        });
+      }, 300);
+    }
+  }
+
+  function closeOverlay() {
+    document.getElementById('panelOverlay').classList.remove('active');
+  }
+
+  // Close on backdrop click
+  document.getElementById('panelOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('panelOverlay')) closeOverlay();
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeOverlay();
+  });
+
+  // Subtle mouse parallax on panels
+  document.addEventListener('mousemove', e => {
+    if (!entered) return;
+    const panels = document.querySelectorAll('.panel');
+    const rx = (e.clientX / window.innerWidth - 0.5) * 8;
+    const ry = (e.clientY / window.innerHeight - 0.5) * 8;
+    panels.forEach((p, i) => {
+      const depth = 0.3 + (i * 0.1);
+      p.style.transform = `translate(${rx * depth}px, ${ry * depth * 0.6}px)`;
+      if (p.id === 'panel-projects') p.style.transform = `translateY(-50%) translate(${rx * depth}px, ${ry * depth * 0.6}px)`;
+      if (p.id === 'panel-experience') p.style.transform = `translateX(-50%) translate(${rx * depth * 0.5}px, ${ry * depth * 0.3}px)`;
+    });
+  });
+</script>
+</body>
+</html>
