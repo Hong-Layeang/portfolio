@@ -4,7 +4,9 @@
   "private": true,
   "description": "portfolio",
   "author": "Hong-Layeang",
-  "keywords": ["gatsby"],
+  "keywords": [
+    "gatsby"
+  ],
   "scripts": {
     "dev": "gatsby develop",
     "start": "gatsby develop",
@@ -14,32 +16,28 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mdx-js/react": "2.3.0",
+    "ajv": "^8.18.0",
+    "autoprefixer": "10.4.19",
     "gatsby": "5.14.6",
+    "gatsby-plugin-google-gtag": "5.14.0",
+    "gatsby-plugin-image": "3.14.0",
+    "gatsby-plugin-manifest": "5.14.0",
+    "gatsby-plugin-mdx": "5.14.0",
+    "gatsby-plugin-postcss": "6.14.0",
+    "gatsby-plugin-sharp": "5.14.0",
+    "gatsby-plugin-sitemap": "6.14.0",
+    "gatsby-source-filesystem": "5.14.0",
+    "gatsby-transformer-sharp": "5.14.0",
+    "postcss": "8.4.38",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-
-    "gatsby-plugin-image": "3.14.0",
-    "gatsby-plugin-sharp": "5.14.0",
-    "gatsby-transformer-sharp": "5.14.0",
-    "gatsby-source-filesystem": "5.14.0",
-    "gatsby-plugin-manifest": "5.14.0",
-    "gatsby-plugin-sitemap": "6.14.0",
-
-    "gatsby-plugin-mdx": "5.14.0",
-    "@mdx-js/react": "2.3.0",
-
-    "gatsby-plugin-postcss": "6.14.0",
-
-    "gatsby-plugin-google-gtag": "5.14.0",
-
-    "tailwindcss": "3.4.4",
-    "postcss": "8.4.38",
-    "autoprefixer": "10.4.19"
+    "tailwindcss": "3.4.4"
   },
   "devDependencies": {
-    "typescript": "5.3.3",
     "@types/node": "20.11.19",
     "@types/react": "18.2.55",
-    "@types/react-dom": "18.2.19"
+    "@types/react-dom": "18.2.19",
+    "typescript": "5.3.3"
   }
 }
