@@ -55,7 +55,7 @@ const About: React.FC = () => (
 
           <div className="about__stats">
             <div className="about__stat reveal-scale reveal-delay-1">
-              <div className="about__stat-number">Intern</div>
+              <div className="about__stat-number">Junior</div>
               <div className="about__stat-label">Current Role</div>
             </div>
             <div className="about__stat reveal-scale reveal-delay-2">
