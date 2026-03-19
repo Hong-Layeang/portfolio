@@ -91,6 +91,9 @@ const SKILL_LOGOS: Record<string, React.ReactNode> = {
   ),
 };
 
+SKILL_LOGOS["Tailwind CSS"] = SKILL_LOGOS.Tailwind;
+SKILL_LOGOS["PostgreSQL (psql)"] = SKILL_LOGOS.PostgreSQL;
+
 const Skills: React.FC = () => (
   <section id="skills" className="section section--3d-perspective">
     <div className="section__container">
