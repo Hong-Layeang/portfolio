@@ -1,14 +1,5 @@
 import React, { useRef, useEffect, useCallback } from "react";
 
-/* ============================================
-   UnityScene — HEAVY Canvas Background
-   Lots of floating shapes, perspective grid,
-   dense particles with constellation links,
-   scanlines, and depth layers.
-   NOW WITH: mouse repulsion, click shockwave,
-   shape proximity glow.
-   ============================================ */
-
 type ShapeType = "square" | "triangle" | "line" | "cross" | "hexagon" | "diamond" | "circle" | "bracket" | "dotGrid";
 
 interface Shape {

@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { PROJECTS, Project } from "../data/portfolio";
 
-/* ============================================
-   Projects — Card grid with hover video autoplay,
-   image carousel, and click-to-open detail modal.
-   ============================================ */
-
-/* ── Image Carousel (crossfade every 2.5s) ── */
+/* Image Carousel (crossfade every 2.5s) */
 const ImageCarousel: React.FC<{ images: string[]; alt: string }> = ({
   images,
   alt,
