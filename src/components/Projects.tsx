@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { PROJECTS, Project } from "../data/portfolio";
+import { getPerfTier } from "../utils/perf";
 
 /* Image Carousel (crossfade every 2.5s) */
 const ImageCarousel: React.FC<{ images: string[]; alt: string }> = ({
@@ -56,6 +57,7 @@ const VideoPreview: React.FC<{ videoId: string; title: string; isCardHovered: bo
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (getPerfTier() === "low") return;
     if (isCardHovered) {
       timeoutRef.current = setTimeout(() => setShowIframe(true), 300);
     } else {

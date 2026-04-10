@@ -9,6 +9,7 @@ import Contact from "../components/Contact";
 import CtaBanner from "../components/CtaBanner";
 import Footer from "../components/Footer";
 import { PERSONAL } from "../data/portfolio";
+import { getPerfTier, hasPointer, prefersReducedMotion } from "../utils/perf";
 
 /* ============================================
    Home Page — compose all sections
@@ -19,8 +20,8 @@ const IndexPage: React.FC = () => {
   const cursorDotRef = React.useRef<HTMLDivElement>(null);
   const cursorGlowRef = React.useRef<HTMLDivElement>(null);
 
-  /* --- Custom 3D Cursor --- */
   React.useEffect(() => {
+    if (!hasPointer() || getPerfTier() === "low" || prefersReducedMotion()) return;
     const cursor = cursorRef.current;
     const dot = cursorDotRef.current;
     const glow = cursorGlowRef.current;
@@ -79,12 +80,14 @@ const IndexPage: React.FC = () => {
     const els = document.querySelectorAll<HTMLElement>(selectors);
     if (!els.length) return;
 
+    const isLow = getPerfTier() === "low" || prefersReducedMotion();
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("revealed");
-          } else {
+            if (isLow) observer.unobserve(entry.target);
+          } else if (!isLow) {
             entry.target.classList.remove("revealed");
           }
         });
@@ -96,8 +99,8 @@ const IndexPage: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  /* --- 3D Tilt on cards (mouse tracking) --- */
   React.useEffect(() => {
+    if (!hasPointer() || prefersReducedMotion()) return;
     const cards = document.querySelectorAll<HTMLElement>(".tilt-3d");
 
     const handleMouse = (e: MouseEvent) => {
@@ -130,8 +133,8 @@ const IndexPage: React.FC = () => {
     };
   }, []);
 
-  /* --- Magnetic hover on skill icons --- */
   React.useEffect(() => {
+    if (!hasPointer() || getPerfTier() === "low" || prefersReducedMotion()) return;
     const items = document.querySelectorAll<HTMLElement>(".skills__icon-item");
     const MAGNETIC_RANGE = 60; // px around center to magnetize
 
@@ -173,8 +176,8 @@ const IndexPage: React.FC = () => {
     };
   }, []);
 
-  /* --- Interactive floating particles (mouse repel) --- */
   React.useEffect(() => {
+    if (getPerfTier() === "low" || prefersReducedMotion()) return;
     const container = document.querySelector<HTMLElement>(".floating-particles");
     if (!container) return;
 
@@ -250,8 +253,8 @@ const IndexPage: React.FC = () => {
     };
   }, []);
 
-  /* --- Parallax scroll for depth layers --- */
   React.useEffect(() => {
+    if (getPerfTier() === "low" || prefersReducedMotion()) return;
     const layers = document.querySelectorAll<HTMLElement>("[data-parallax]");
     const onScroll = () => {
       const scrollY = window.scrollY;
@@ -264,19 +267,26 @@ const IndexPage: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const tier = React.useMemo(() => getPerfTier(), []);
+  const pointer = React.useMemo(() => hasPointer(), []);
+  const reducedMotion = React.useMemo(() => prefersReducedMotion(), []);
+  const showFancyEffects = pointer && tier !== "low" && !reducedMotion;
+
   return (
     <main>
-      {/* Custom 3D cursor */}
-      <div ref={cursorGlowRef} className="cursor-glow" />
-      <div ref={cursorRef} className="cursor-ring" />
-      <div ref={cursorDotRef} className="cursor-dot" />
+      {showFancyEffects && (
+        <>
+          <div ref={cursorGlowRef} className="cursor-glow" />
+          <div ref={cursorRef} className="cursor-ring" />
+          <div ref={cursorDotRef} className="cursor-dot" />
+        </>
+      )}
 
-      {/* Ambient overlays */}
-      <div className="noise-overlay" />
+      {tier !== "low" && <div className="noise-overlay" />}
       <div className="vignette-overlay" />
-      <div className="deco-grid" />
+      {tier !== "low" && <div className="deco-grid" />}
 
-      {/* Floating 3D particles */}
+      {tier !== "low" && !reducedMotion && (
       <div className="floating-particles" aria-hidden="true">
         <div className="particle particle--1" />
         <div className="particle particle--2" />
@@ -285,6 +295,7 @@ const IndexPage: React.FC = () => {
         <div className="particle particle--5" />
         <div className="particle particle--6" />
       </div>
+      )}
 
       <Navbar />
       <Hero />

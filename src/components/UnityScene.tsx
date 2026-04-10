@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback } from "react";
+import { getPerfTier, prefersReducedMotion, type PerfTier } from "../utils/perf";
 
 type ShapeType = "square" | "triangle" | "line" | "cross" | "hexagon" | "diamond" | "circle" | "bracket" | "dotGrid";
 
@@ -38,8 +39,14 @@ interface Shockwave {
   speed: number;
 }
 
-const SHAPE_COUNT = 45;
-const PARTICLE_COUNT = 160;
+function getCounts(tier: PerfTier) {
+  switch (tier) {
+    case "low":  return { shapes: 12, particles: 30, constellations: false };
+    case "mid":  return { shapes: 25, particles: 70, constellations: true };
+    default:     return { shapes: 45, particles: 160, constellations: true };
+  }
+}
+
 const MOUSE_REPULSE_RADIUS = 120;
 const MOUSE_REPULSE_FORCE = 1.8;
 const SHAPE_GLOW_RADIUS = 180;
@@ -54,10 +61,12 @@ const UnityScene: React.FC = () => {
   const shockwaves = useRef<Shockwave[]>([]);
   const animId = useRef<number>(0);
   const time = useRef(0);
+  const tier = useRef<PerfTier>(getPerfTier());
+  const counts = useRef(getCounts(tier.current));
 
   const initShapes = useCallback((w: number, h: number) => {
     const types: ShapeType[] = ["square", "triangle", "line", "cross", "hexagon", "diamond", "circle", "bracket", "dotGrid"];
-    shapes.current = Array.from({ length: SHAPE_COUNT }, () => {
+    shapes.current = Array.from({ length: counts.current.shapes }, () => {
       const layer = Math.random() < 0.3 ? 0 : Math.random() < 0.6 ? 1 : 2;
       const sizeMulti = layer === 0 ? 0.6 : layer === 1 ? 1 : 1.5;
       return {
@@ -81,7 +90,7 @@ const UnityScene: React.FC = () => {
   }, []);
 
   const initParticles = useCallback((w: number, h: number) => {
-    particles.current = Array.from({ length: PARTICLE_COUNT }, () => {
+    particles.current = Array.from({ length: counts.current.particles }, () => {
       const layer = Math.random() < 0.4 ? 0 : Math.random() < 0.7 ? 1 : 2;
       return {
         x: Math.random() * w,
@@ -209,11 +218,13 @@ const UnityScene: React.FC = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (prefersReducedMotion()) return;
     const ctx = canvas.getContext("2d")!;
     let w = 0, h = 0;
 
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const maxDpr = tier.current === "low" ? 1 : tier.current === "mid" ? 1.5 : (window.devicePixelRatio || 1);
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
       const rect = canvas.parentElement!.getBoundingClientRect();
       w = rect.width;
       h = rect.height;
@@ -294,13 +305,14 @@ const UnityScene: React.FC = () => {
       }
       ctx.restore();
 
-      /* === Scanlines (subtle) === */
-      ctx.save();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.008)";
-      for (let y = 0; y < h; y += 4) {
-        ctx.fillRect(0, y, w, 1);
+      if (tier.current !== "low") {
+        ctx.save();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.008)";
+        for (let y = 0; y < h; y += 4) {
+          ctx.fillRect(0, y, w, 1);
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       /* === Mouse pixel position (for repulsion) === */
       const canvasRect = canvas.getBoundingClientRect();
@@ -398,8 +410,7 @@ const UnityScene: React.FC = () => {
         ctx.lineWidth = (s.layer === 2 ? 1.2 : s.layer === 1 ? 0.8 : 0.5) * glowFactor;
         ctx.globalAlpha = 1;
 
-        // Draw glow halo for nearby shapes
-        if (distToMouse < SHAPE_GLOW_RADIUS) {
+        if (tier.current !== "low" && distToMouse < SHAPE_GLOW_RADIUS) {
           ctx.shadowColor = "rgba(255, 255, 255, 0.4)";
           ctx.shadowBlur = 12 * (1 - distToMouse / SHAPE_GLOW_RADIUS);
         }
@@ -461,7 +472,7 @@ const UnityScene: React.FC = () => {
         ctx.beginPath();
         ctx.arc(px, py, p.r * (pGlow > 1 ? 1 + (pGlow - 1) * 0.3 : 1), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        if (pDistToMouse < MOUSE_REPULSE_RADIUS) {
+        if (tier.current !== "low" && pDistToMouse < MOUSE_REPULSE_RADIUS) {
           ctx.shadowColor = "rgba(255, 255, 255, 0.5)";
           ctx.shadowBlur = 8 * (1 - pDistToMouse / MOUSE_REPULSE_RADIUS);
         } else {
@@ -473,25 +484,26 @@ const UnityScene: React.FC = () => {
         ctx.shadowBlur = 0;
       });
 
-      /* === Constellation lines (denser, by layer) === */
-      const connectionRadius = 110;
-      for (let i = 0; i < particles.current.length; i++) {
-        for (let j = i + 1; j < particles.current.length; j++) {
-          const a = particles.current[i];
-          const b = particles.current[j];
-          if (Math.abs(a.layer - b.layer) > 1) continue;
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const distSq = dx * dx + dy * dy;
-          if (distSq < connectionRadius * connectionRadius) {
-            const dist = Math.sqrt(distSq);
-            const alpha = (1 - dist / connectionRadius) * 0.06;
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-            ctx.lineWidth = 0.4;
-            ctx.stroke();
+      if (counts.current.constellations) {
+        const connectionRadius = 110;
+        for (let i = 0; i < particles.current.length; i++) {
+          for (let j = i + 1; j < particles.current.length; j++) {
+            const a = particles.current[i];
+            const b = particles.current[j];
+            if (Math.abs(a.layer - b.layer) > 1) continue;
+            const dx = a.x - b.x;
+            const dy = a.y - b.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < connectionRadius * connectionRadius) {
+              const dist = Math.sqrt(distSq);
+              const alpha = (1 - dist / connectionRadius) * 0.06;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+              ctx.lineWidth = 0.4;
+              ctx.stroke();
+            }
           }
         }
       }
